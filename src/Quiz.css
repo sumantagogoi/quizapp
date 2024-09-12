@@ -1,0 +1,34 @@
+/* src/Quiz.css */
+.quiz-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 50px;
+    box-sizing: border-box;
+    
+  }
+  
+  .question-container {
+    text-align: center;
+  }
+  
+  .option-button {
+    display: block;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: rgb(147, 154, 156);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .next-button {
+    padding: 10px;
+    background-color: rgb(93, 97, 153);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
