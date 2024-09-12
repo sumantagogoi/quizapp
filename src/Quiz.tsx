@@ -1,20 +1,25 @@
-// src/Quiz.tsx
 import React, { useState, useEffect } from 'react';
-import './Quiz.css'; // Import CSS file for styling
+import './Quiz.css'; 
 
 interface Question {
   question: string;
   answer: string[];
   correct: number;
+  note: string;
 }
 
-// Shuffle function to randomize array order
-const shuffleArray = <T,>(array: T[]): T[] => {
-  let currentIndex = array.length, randomIndex;
-  while (currentIndex !== 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+const adjustWeights = true; // Boolean to control weight adjustment
+
+const shuffleArrayWithWeights = <T,>(array: T[], weights: number[]): T[] => {
+  let totalWeight = weights.reduce((acc, weight) => acc + 1 / weight, 0);
+  let randomValue = Math.random() * totalWeight;
+
+  for (let i = 0; i < array.length; i++) {
+    const weightChance = 1 / weights[i];
+    if (randomValue < weightChance) {
+      return [array[i], ...array.slice(0, i), ...array.slice(i + 1)];
+    }
+    randomValue -= weightChance;
   }
   return array;
 };
@@ -22,11 +27,12 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 const fetchQuestions = async () => {
   const response = await fetch('/questions.json');
   const data: Question[] = await response.json();
-  return shuffleArray(data); // Shuffle questions when fetched
+  return data;
 };
 
 const Quiz: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [weights, setWeights] = useState<number[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [attempted, setAttempted] = useState(0);
@@ -34,7 +40,10 @@ const Quiz: React.FC = () => {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetchQuestions().then(setQuestions);
+    fetchQuestions().then((data) => {
+      setQuestions(data);
+      setWeights(Array(data.length).fill(1)); // Initialize weights
+    });
   }, []);
 
   const handleAnswer = (index: number) => {
@@ -49,29 +58,44 @@ const Quiz: React.FC = () => {
     }
   };
 
+  const updateWeights = (currentQuestionIndex: number) => {
+    if (adjustWeights) {
+      setWeights((prevWeights) =>
+        prevWeights.map((weight, index) =>
+          index === currentQuestionIndex ? weight * 2 : weight
+        )
+      );
+    }
+  };
+
   const handleNext = () => {
     setAnswered(false);
     setIsCorrect(null);
-    setCurrentQuestionIndex((prev) => (prev + 1) % questions.length); // Loop back to first question
+    updateWeights(currentQuestionIndex); // Update the weight of the current question
+
+    // Shuffle questions using weights
+    const nextQuestions = shuffleArrayWithWeights(questions, weights);
+    setQuestions(nextQuestions);
+    setCurrentQuestionIndex(0);
   };
 
   if (questions.length === 0) return <p>Loading...</p>;
 
   const currentQuestion = questions[currentQuestionIndex];
-  const answers = shuffleArray([...currentQuestion.answer]); // Shuffle options
+  const answers = currentQuestion.answer;
 
   return (
     <div className="quiz-container">
       <h1>Quiz App</h1>
       <p>Score: {score}/{attempted}</p>
       <div className="question-container">
-        <h2>{currentQuestion.question}</h2>
+        <h4>{currentQuestion.question}</h4>
         {!answered ? (
-          <div>
+          <div className='multi-choice'>
             {answers.map((option, index) => (
-              <button
+                <button
                 key={index}
-                onClick={() => handleAnswer(currentQuestion.answer.indexOf(option))}
+                onClick={() => handleAnswer(index)}
                 className="option-button"
               >
                 {option}
@@ -80,20 +104,9 @@ const Quiz: React.FC = () => {
           </div>
         ) : (
           <div>
-            {isCorrect ? (
-              <p>Correct!</p>
-            ) : (
-              <p>
-                Wrong! The correct answer is{' '}
-                {currentQuestion.answer[currentQuestion.correct]}.
-              </p>
-            )}
-            <button
-              onClick={handleNext}
-              className="next-button"
-            >
-              Next Question
-            </button>
+            {isCorrect ? <p>Correct!</p> : <p>Wrong! The correct answer is {currentQuestion.answer[currentQuestion.correct]}.</p>}
+            {currentQuestion.note && <p className="note">{currentQuestion.note}</p>}
+            <button onClick={handleNext} className="next-button">Next Question</button>
           </div>
         )}
       </div>
