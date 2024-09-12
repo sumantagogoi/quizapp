@@ -24,11 +24,23 @@ const shuffleArrayWithWeights = <T,>(array: T[], weights: number[]): T[] => {
   return array;
 };
 
-const fetchQuestions = async () => {
-  const response = await fetch('/questions.json');
-  const data: Question[] = await response.json();
-  return data;
+// Shuffle function to randomize question order
+const shuffleArray = <T,>(array: T[]): T[] => {
+    let currentIndex = array.length, randomIndex;
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    }
+    return array;
 };
+
+const fetchQuestions = async () => {
+    const response = await fetch('/questions.json');
+    const data: Question[] = await response.json();
+    return shuffleArray(data); // Shuffle questions when fetched
+};
+
 
 const Quiz: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -82,7 +94,8 @@ const Quiz: React.FC = () => {
   if (questions.length === 0) return <p>Loading...</p>;
 
   const currentQuestion = questions[currentQuestionIndex];
-  const answers = currentQuestion.answer;
+  const answers = shuffleArray([...currentQuestion.answer]);
+
 
   return (
     <div className="quiz-container">
@@ -95,7 +108,7 @@ const Quiz: React.FC = () => {
             {answers.map((option, index) => (
                 <button
                 key={index}
-                onClick={() => handleAnswer(index)}
+                onClick={() => handleAnswer(currentQuestion.answer.indexOf(option))}
                 className="option-button"
               >
                 {option}
